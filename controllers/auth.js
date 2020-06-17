@@ -21,19 +21,48 @@ exports.signup = (req, res) => {
     user.salt = undefined;
     user.hashed_password = undefined;
 
+    //generate a token for email verification
+    const token = jwt.sign({ _id: user._id }, process.env.EMAIL_JWT_SECRET, {
+      expiresIn: "1h",
+    });
+    console.log("token", token);
+
+    const confirmationEmailLink = `http://localhost:3000/registration/email_confirmation/${token}`;
+
     //send confirmation email
     //temporary hard coded
     const msg = {
       to: "simonnguyen3054@gmail.com",
       from: "kins.simonnguyen@gmail.com",
-      subject: "Sending with Twilio SendGrid is Fun",
-      text: "and easy to do anywhere, even with Node.js",
-      html: "<b> Test email text </b>",
+      subject: "Confirm your email",
+      html: `Please click this link to confirm your email: <a href="${confirmationEmailLink}">Verify Email</a>`,
     };
     sendEmailConfirmation(msg);
 
     res.json({ user });
   });
+};
+
+exports.emailConfirmation = (req, res, next, token) => {
+  try {
+    const user = jwt.verify(token, process.env.EMAIL_JWT_SECRET);
+    User.findByIdAndUpdate(
+      user._id,
+      { email_confirmed: true },
+      { new: true },
+      (err, user) => {
+        if (err) {
+          res.status(403).json(err.message);
+        }
+
+        //add user to profile property
+        req.profile = user;
+        next();
+      }
+    );
+  } catch (error) {
+    res.status(403).json(error.message);
+  }
 };
 
 exports.signin = (req, res) => {
@@ -61,7 +90,7 @@ exports.signin = (req, res) => {
     }
 
     //generate a signed token with user id and secret
-    const token = jwt.sign({ _id: user._id }, process.env.JWT_SECRET);
+    const token = jwt.sign({ _id: user._id }, process.env.SIGNIN_JWT_SECRET);
     //persist the token as "t" in cookie with expiry date
     res.cookie("token", token, {
       expire: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000),
@@ -82,7 +111,7 @@ exports.signout = (req, res) => {
 //req.auth gives the profile of the user that's signed in
 //The decoded JWT payload is available on the request via the user property. This can be configured using the requestProperty
 exports.requireSignin = expressJwt({
-  secret: process.env.JWT_SECRET,
+  secret: process.env.SIGNIN_JWT_SECRET,
   userProperty: "auth",
 });
 
