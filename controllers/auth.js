@@ -1,7 +1,7 @@
 const User = require("../models/user");
 const { validationResult } = require("express-validator");
 const { formatErrors } = require("../middlewares/validate");
-const { userSignupEmail } = require("../emails");
+const { sendEmailConfirmation } = require("../emails");
 const jwt = require("jsonwebtoken"); //to genenerate a signed token
 const expressJwt = require("express-jwt"); //for authorization check
 
@@ -22,14 +22,15 @@ exports.signup = (req, res) => {
     user.hashed_password = undefined;
 
     //send confirmation email
-    // const msg = {
-    //   to: 'simonnguyen3054@gmail.com',
-    //   from: 'kins.simonnguyen@gmail.com',
-    //   subject: 'Sending with Twilio SendGrid is Fun',
-    //   text: 'and easy to do anywhere, even with Node.js',
-    //   html: '<strong>and easy to do anywhere, even with Node.js</strong>',
-    // };
-    // userSignupEmail(msg);
+    //temporary hard coded
+    const msg = {
+      to: "simonnguyen3054@gmail.com",
+      from: "kins.simonnguyen@gmail.com",
+      subject: "Sending with Twilio SendGrid is Fun",
+      text: "and easy to do anywhere, even with Node.js",
+      html: "<b> Test email text </b>",
+    };
+    sendEmailConfirmation(msg);
 
     res.json({ user });
   });
@@ -50,6 +51,12 @@ exports.signin = (req, res) => {
     if (!user.authenticate(password)) {
       return res.status(401).json({
         error: "Email and password don't match.",
+      });
+    }
+
+    if (!user.email_confirmed) {
+      return res.status(403).json({
+        error: "Please confirm your email.",
       });
     }
 

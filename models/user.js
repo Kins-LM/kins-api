@@ -27,6 +27,10 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
     salt: String,
+    email_confirmed: {
+      type: Boolean,
+      default: false
+    }
   },
   { timestamps: true }
 );
